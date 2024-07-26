@@ -24,7 +24,7 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
     register_hooks(accelerator, models, args)
 
     for epoch in range(first_epoch, args.num_train_epochs):
-        logger.info(f"Epoch {epoch} start")
+        #logger.info(f"Epoch {epoch} start")
         unet.train()
         if args.train_text_encoder:
             text_encoder_one.train()
@@ -33,7 +33,7 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
         for step, batch in enumerate(train_dataloader):
             with accelerator.accumulate(unet):
                 try:
-                    logger.info(f"Epoch {epoch}, Step {step}: Loading and preparing data")
+                    #logger.info(f"Epoch {epoch}, Step {step}: Loading and preparing data")
                     prompts = batch["prompts"]
                     pixel_values = batch["pixel_values"].to(accelerator.device, dtype=vae.dtype)
                     latents = vae.encode(pixel_values).latent_dist.sample() * vae.config.scaling_factor
@@ -47,13 +47,13 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
 
                     target = noise
                     loss = compute_loss(model_output, target, noise_scheduler, timesteps, latents)
-                    logger.info(f"Epoch {epoch}, Step {step}: Computing gradients")
+                    #logger.info(f"Epoch {epoch}, Step {step}: Computing gradients")
                     accelerator.backward(loss)
 
                     if accelerator.sync_gradients:
                         torch.nn.utils.clip_grad_norm_(unet.parameters(), 1.0)
 
-                    logger.info(f"Epoch {epoch}, Step {step}: Updating optimizer and learning rate scheduler")
+                    #logger.info(f"Epoch {epoch}, Step {step}: Updating optimizer and learning rate scheduler")
                     optimizer.step()
                     lr_scheduler.step()
                     optimizer.zero_grad()
@@ -75,7 +75,7 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
                     logger.error(f"Error at epoch {epoch}, step {step}: {e}")
                     raise
 
-        logger.info(f"Epoch {epoch} end")
+        #logger.info(f"Epoch {epoch} end")
         gc.collect()
         torch.cuda.empty_cache()
 
