@@ -1,5 +1,4 @@
 __pycache__/
 output/
-reward_guidance.py
 dataset/
 diffusers/
