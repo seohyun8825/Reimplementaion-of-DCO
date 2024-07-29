@@ -67,7 +67,7 @@ class TrainDataset(Dataset):
             example["base_prompt"] = self.base_prompts[index % self.num_instance_images]
 
         return example
-
+##for check
 if __name__ == "__main__":
     import argparse
 
