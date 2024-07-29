@@ -1,0 +1,34 @@
+{
+    "comprehensive": {
+        "images": ["dataset/happy/05.jpg", "dataset/happy/06.jpg", "dataset/happy/07.jpg", "dataset/happy/08.jpg", "dataset/happy/09.jpg"],
+        "prompts": ["a photo of sks dog", "a photo of sks dog", "a photo of sks dog", "a photo of sks dog", "a photo of sks dog"],
+        "test_images": ["dataset/happy/05.jpg", "dataset/happy/06.jpg", "dataset/happy/07.jpg", "dataset/happy/08.jpg", "dataset/happy/09.jpg"],
+        "identifier": "sks dog",
+        "class": "dog",
+        "inserting_tokens": ["sks dog"],
+        "initializer_tokens": ["dog"],
+        "base_prompts": ["a photo of a dog", "a photo of a dog", "a photo of a dog", "a photo of a dog", "a photo of a dog"]
+    },
+    "full_ti": {
+        "images": ["dataset/happy/05.jpg", "dataset/happy/06.jpg", "dataset/happy/07.jpg", "dataset/happy/08.jpg", "dataset/happy/09.jpg"],
+        "prompts": [
+            "a closed-up photo of a <dog> standing on a sandy beach with the ocean in the background, macro style",
+            "a close-up photo of a <dog> with a red harness standing on rocky terrain near the ocean, macro style",
+            "a photo of a <dog> sitting on the floor in a sleek, gray-themed room with a fan and other dogs, macro style",
+            "a side-view photo of a <dog> with a red harness standing on a paved pathway, macro style",
+            "a photo of a <dog> lying on a wooden floor, macro style"
+        ],
+        "base_prompts": [
+            "a closed-up photo of a dog standing on a sandy beach with the ocean in the background, macro style",
+            "a close-up photo of a dog with a red harness standing on rocky terrain near the ocean, macro style",
+            "a photo of a dog sitting on the floor in a sleek, gray-themed room with a fan and other dogs, macro style",
+            "a side-view photo of a dog with a red harness standing on a paved pathway, macro style",
+            "a photo of a dog lying on a wooden floor, macro style"
+        ],
+        "test_images": ["dataset/happy/05.jpg", "dataset/happy/06.jpg", "dataset/happy/07.jpg", "dataset/happy/08.jpg", "dataset/happy/09.jpg"],
+        "identifier": "<dog>",
+        "class": "dog",
+        "inserting_tokens": ["<dog>"],
+        "initializer_tokens": ["dog"]
+    }
+}
