@@ -104,14 +104,21 @@ def tokenize_prompt(tokenizer, prompt):
     )
     text_input_ids = text_inputs.input_ids
     return text_input_ids
-
+    
 def encode_prompt(text_encoders, tokenizers, prompt, text_input_ids_list=None):
     prompt_embeds_list = []
 
     for i, text_encoder in enumerate(text_encoders):
         if tokenizers is not None:
             tokenizer = tokenizers[i]
-            text_input_ids = tokenizer(prompt, return_tensors="pt", truncation=True, padding=True).input_ids
+            text_inputs = tokenizer(
+                prompt,
+                padding="max_length",
+                max_length=tokenizer.model_max_length,
+                truncation=True,
+                return_tensors="pt",
+            )
+            text_input_ids = text_inputs.input_ids
         else:
             assert text_input_ids_list is not None, "text_input_ids_list must be provided if tokenizers is None."
             text_input_ids = text_input_ids_list[i]
@@ -121,19 +128,16 @@ def encode_prompt(text_encoders, tokenizers, prompt, text_input_ids_list=None):
             output_hidden_states=True,
         )
 
-        # 마지막레이어꺼사용
         hidden_states = outputs.hidden_states
         penultimate_hidden_state = hidden_states[-2]
         bs_embed, seq_len, _ = penultimate_hidden_state.shape
 
-        # to list
         prompt_embeds_list.append(penultimate_hidden_state.view(bs_embed, seq_len, -1))
-
-        # embedding 철번쨰
         pooled_prompt_embeds = outputs[0]
 
-    # 모든 텍스트 인코더의 임베딩을 연결
     final_prompt_embeds = torch.cat(prompt_embeds_list, dim=-1)
     final_pooled_embeds = pooled_prompt_embeds.view(bs_embed, -1)
 
     return final_prompt_embeds, final_pooled_embeds
+
+
