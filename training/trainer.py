@@ -61,8 +61,7 @@ def train(args):
         optimizer, lr_scheduler, train_dataloader = setup_optimizer_and_scheduler(args, accelerator, models)
 
         register_hooks(accelerator, models, args)
-        
-        #if usign text inversion
+
         if args.train_text_encoder_ti:
             embedding_handler = TokenEmbeddingsHandler(text_encoders, tokenizers)
             with open(args.config_dir, 'r') as data_config:
