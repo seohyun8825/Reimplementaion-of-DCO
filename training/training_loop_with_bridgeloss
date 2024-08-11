@@ -10,6 +10,9 @@ from training.hooks import register_hooks
 
 logger = logging.getLogger(__name__)
 
+#this loss reflects customized data in some extent, but cannot fully reflect
+#loss is not being converged
+
 def compute_ikl_loss(pred_dist, target_dist):
 
     kl_divergence = torch.distributions.kl_divergence(pred_dist, target_dist)
