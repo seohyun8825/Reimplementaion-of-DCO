@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 import gc
 import logging
 import copy
@@ -11,19 +10,20 @@ from training.hooks import register_hooks
 
 logger = logging.getLogger(__name__)
 
-def compute_integral_kl_dco_loss(model_output, refer_output, timesteps, beta):
+def compute_integral_kl_dco_loss(loss_model, loss_refer, timesteps, beta):
+    """
+    Integral KL DCO loss
+    """
+ 
+    w_t = torch.sin(timesteps.float() / timesteps.max()) 
+
+    diff = loss_model - loss_refer
 
 
-    w_t = torch.sin(timesteps.float() / timesteps.max())  
-
-    # ||epsilon_theta(x_t; c, t) - epsilon_phi(x_t; c, t)||_2^2
-    diff_squared = torch.norm(model_output - refer_output, p=2, dim=-1) ** 2
-
-    # Integral
-    integral_term = torch.sum(w_t * diff_squared, dim=0) 
+    integral_term = torch.sum(w_t * diff, dim=0) 
 
     # -log(sigma(-beta * integral_term))
-    loss = -F.logsigmoid(-beta * integral_term)
+    loss = -1 * torch.nn.LogSigmoid()(-beta * integral_term)
 
     return loss.mean() 
 
@@ -77,11 +77,12 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
                     target = noise
 
                     loss_model = compute_loss(model_output, target, noise_scheduler, timesteps, latents)
+                    loss_refer = compute_loss(refer_output, target, noise_scheduler, timesteps, latents)
 
                     if args.dcoloss > 0.0:
-                        loss_refer = compute_loss(refer_output, target, noise_scheduler, timesteps, latents)
-                        dco_loss = compute_integral_kl_dco_loss(model_output, refer_output, timesteps, args.dcoloss)
-                        loss = loss_model + dco_loss
+
+                        dco_loss = compute_integral_kl_dco_loss(loss_model, loss_refer, timesteps, args.dcoloss)
+                        loss = dco_loss
                     else:
                         loss = loss_model
 
