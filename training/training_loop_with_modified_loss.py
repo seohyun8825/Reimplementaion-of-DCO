@@ -7,7 +7,7 @@ from training.utils import compute_text_embeddings, compute_time_ids
 from training.checkpoint import save_checkpoint
 from training.loss import compute_loss
 from training.hooks import register_hooks
-
+#detected NAN have to solve
 logger = logging.getLogger(__name__)
 def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_scheduler, train_dataloader, text_encoders, tokenizers):
     vae, unet = models["vae"], models["unet"]
