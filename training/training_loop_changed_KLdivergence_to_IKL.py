@@ -11,19 +11,15 @@ from training.hooks import register_hooks
 logger = logging.getLogger(__name__)
 
 def compute_integral_kl_dco_loss(loss_model, loss_refer, timesteps, beta):
-    """
-    Integral KL DCO loss
-    """
- 
-    w_t = torch.sin(timesteps.float() / timesteps.max()) 
 
-    diff = loss_model - loss_refer
+    w_t = torch.ones_like(timesteps).float()  
 
+    diff = torch.clamp(loss_model - loss_refer, min=-1, max=1)
 
-    integral_term = torch.sum(w_t * diff, dim=0) 
-
-    # -log(sigma(-beta * integral_term))
-    loss = -1 * torch.nn.LogSigmoid()(-beta * integral_term)
+    integral_term = torch.sum(w_t * diff, dim=0)
+    
+    epsilon = 1e-5  
+    loss = -1 * torch.nn.LogSigmoid()(-beta * integral_term + epsilon)
 
     return loss.mean() 
 
@@ -80,7 +76,6 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
                     loss_refer = compute_loss(refer_output, target, noise_scheduler, timesteps, latents)
 
                     if args.dcoloss > 0.0:
-
                         dco_loss = compute_integral_kl_dco_loss(loss_model, loss_refer, timesteps, args.dcoloss)
                         loss = dco_loss
                     else:
@@ -89,7 +84,7 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
                     accelerator.backward(loss)
 
                     if accelerator.sync_gradients:
-                        torch.nn.utils.clip_grad_norm_(unet.parameters(), 1.0)
+                        torch.nn.utils.clip_grad_norm_(unet.parameters(), 0.5)  # 그래디언트 클리핑 값 줄임
 
                     optimizer.step()
                     lr_scheduler.step()
