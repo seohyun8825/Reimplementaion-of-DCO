@@ -64,6 +64,7 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
                     losing_timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (losing_latents.shape[0],)).long().to(losing_latents.device)
                     losing_noisy_latents = noise_scheduler.add_noise(losing_latents, noise, timesteps)
 
+
                     with torch.no_grad():
                         losing_refer_output = refer_model(losing_noisy_latents, timesteps, prompt_embeds, added_cond_kwargs = added_cond_kwargs).sample
                 
@@ -72,20 +73,28 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
                     with torch.no_grad():
                         refer_output = refer_model(noisy_latents, timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample
 
-                    target = noise
+                    target_win = noise
+                    target_lose = losing_noise
 
-                    loss_model_win = compute_loss(model_output, target, noise_scheduler, timesteps, latents)
+                    loss_model_win = compute_loss(model_output, target_win, noise_scheduler, timesteps, latents)
 
 
-                    loss_model_lose = compute_loss(losing_model_output, target, noise_scheduler, timesteps, latents)
+                    loss_model_lose = compute_loss(losing_model_output, target_lose, noise_scheduler, losing_timesteps, losing_latents)
                     ##losing noise timestep 바꿔야함
 
                     if args.dcoloss > 0.0:
-                        loss_refer_win = compute_loss(refer_output, target, noise_scheduler, timesteps, latents)
+                        loss_refer_win = compute_loss(refer_output, target_win, noise_scheduler, timesteps, latents)
 
-                        loss_refer_lose = compute_loss(losing_refer_output, target, noise_scheduler, timesteps, latents)
-                        diff = loss_model_win - loss_refer_win
+                        loss_refer_lose = compute_loss(losing_refer_output, target_lose, noise_scheduler, losing_timesteps, losing_latents)
+                        diff_win = loss_model_win - loss_refer_win
+
+                        diff_lose = loss_model_lose - loss_refer_lose
+                        print("diff_lose : ")
+
+                        diff = diff_win - diff_lose
+
                         inside_term = -1 * args.dcoloss * diff
+
                         loss = -1 * torch.nn.LogSigmoid()(inside_term)
                     else:
                         loss = loss_model_win
