@@ -1,12 +1,32 @@
+
 {
     "fine_tune_happy": {
-        "images": ["dataset/happy/05.jpg", "dataset/happy/06.jpg", "dataset/happy/07.jpg", "dataset/happy/08.jpg", "dataset/happy/09.jpg"],
-        "prompts": ["a photo of sks dog", "a photo of sks dog", "a photo of sks dog", "a photo of sks dog", "a photo of sks dog"],
+        "images": [
+            "dataset/happy/05.jpg",
+            "dataset/happy/06.jpg",
+            "dataset/happy/07.jpg", 
+            "dataset/happy/08.jpg",
+            "dataset/happy/09.jpg"
+        ],
+        "prompts": [
+            "a side-view photo of a <dog> on the sand at the beach",
+            "a side-view photo of a <dog> with a red collar on a rock at the beach",
+            "a photo of a <dog> indoors, looking forward with other dogs lying in the background",
+            "a photo of a <dog> walking with a red collar, looking sideways",
+            "a photo of a <dog> indoors, looking straight ahead"
+        ],
         "test_images": ["dataset/happy/05.jpg", "dataset/happy/06.jpg", "dataset/happy/07.jpg", "dataset/happy/08.jpg", "dataset/happy/09.jpg"],
-        "identifier": "sks dog",
+        "identifier": "<dog>",
         "class": "dog",
-        "inserting_tokens": ["sks dog"],
-        "initializer_tokens": ["dog"],
-        "base_prompts": ["a photo of a dog", "a photo of a dog", "a photo of a dog", "a photo of a dog", "a photo of a dog"]
+
+        "base_prompts": [
+            "a side-view photo of a dog on the sand at the beach",
+            "a side-view photo of a dog with a red collar on a rock at the beach",
+            "a photo of a dog indoors, looking forward with other dogs lying in the background",
+            "a photo of a dog walking with a red collar, looking sideways",
+            "a photo of a dog indoors, looking straight ahead"
+        ],
+        "inserting_tokens": ["<dog>"],
+        "initializer_tokens": ["dog"]
     }
 }
