@@ -17,9 +17,9 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
     embedding_handler = models.get("embedding_handler")
 
     refer_model = copy.deepcopy(unet)
-    refer_model.eval()  # Set the reference model to evaluation mode
+    refer_model.eval()
     for param in refer_model.parameters():
-        param.requires_grad = False  # Freeze the reference model
+        param.requires_grad = False 
 
     global_step, first_epoch = 0, 0
 
@@ -36,7 +36,7 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
     progress_bar = progressbar.ProgressBar(max_value=args.max_train_steps, widgets=widgets)
     progress_bar.start()
 
-    model_outputs = deque(maxlen=50)  # Deque to store model outputs for averaging
+    model_outputs = deque(maxlen=100) 
 
     for epoch in range(first_epoch, args.num_train_epochs):
         unet.train()
@@ -49,7 +49,6 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
                 prompts = batch["prompts"]
                 pixel_values = batch["pixel_values"].to(accelerator.device, dtype=vae.dtype)
 
-                # Encode original pixel values to latents
                 latents = vae.encode(pixel_values).latent_dist.sample() * vae.config.scaling_factor
                 noise = torch.randn_like(latents)
                 timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (latents.shape[0],)).long().to(latents.device)
@@ -58,34 +57,31 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
                 prompt_embeds, pooled_prompt_embeds = compute_text_embeddings(prompts, text_encoders, tokenizers, accelerator)
                 added_cond_kwargs = {"text_embeds": pooled_prompt_embeds, "time_ids": time_ids}
 
+
                 model_output = unet(noisy_latents, timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample
-                model_outputs.append(model_output.detach())  # Append output to deque
+                model_output = model_output.detach()  
 
-                if step % 50 == 0 and len(model_outputs) > 0:
-                    average_model_output = torch.mean(torch.stack(list(model_outputs)), dim=0)
-                    model_outputs.clear()  # Clear the deque after calculating the average
 
-                with torch.no_grad():
-                    refer_output = refer_model(noisy_latents, timesteps, prompt_embeds, added_cond_kwargs).sample
+                model_outputs.append(model_output)
 
-                # Use the latest average model output as losing_pixel_values
-                if average_model_output is not None:
-                    losing_latents = vae.encode(average_model_output).latent_dist.sample() * vae.config.scaling_factor
+                if len(model_outputs) == 100:
+                    losing_latents = model_outputs.popleft() 
                 else:
-                    losing_latents = vae.encode(model_output.detach()).latent_dist.sample() * vae.config.scaling_factor
+                    losing_latents = model_output
 
                 losing_noise = torch.randn_like(losing_latents)
                 losing_timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (losing_latents.shape[0],)).long().to(losing_latents.device)
                 losing_noisy_latents = noise_scheduler.add_noise(losing_latents, losing_noise, losing_timesteps)
 
                 with torch.no_grad():
-                    losing_refer_output = refer_model(losing_noisy_latents, losing_timesteps, prompt_embeds, added_cond_kwargs).sample
+                    refer_output = refer_model(noisy_latents, timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample
+                    losing_refer_output = refer_model(losing_noisy_latents, losing_timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample
 
                 target_win = noise
                 target_lose = losing_noise
 
                 loss_model_win = compute_loss(model_output, target_win, noise_scheduler, timesteps, latents)
-                loss_model_lose = compute_loss(unet(losing_noisy_latents, losing_timesteps, prompt_embeds, added_cond_kwargs).sample, target_lose, noise_scheduler, losing_timesteps, losing_latents)
+                loss_model_lose = compute_loss(unet(losing_noisy_latents, losing_timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample, target_lose, noise_scheduler, losing_timesteps, losing_latents)
 
                 if args.dcoloss > 0.0:
                     loss_refer_win = compute_loss(refer_output, target_win, noise_scheduler, timesteps, latents)
@@ -95,9 +91,14 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
                     diff_lose = loss_model_lose - loss_refer_lose
                     
                     diff = diff_win - diff_lose
-                    loss = -1 * torch.nn.LogSigmoid()(args.dcoloss * diff)
+                    inside_term = -1 * args.dcoloss * diff
+                    loss = -1 * torch.nn.LogSigmoid()(inside_term)
+
+                    # 
+                    #print(f"Step: {step}, Loss: {loss.item()}, diff_win: {diff_win.item()}, diff_lose: {diff_lose.item()}, diff: {diff.item()}")
                 else:
                     loss = loss_model_win
+                    #print(f"Step: {step}, Loss: {loss.item()}")
 
                 accelerator.backward(loss)
                 optimizer.step()
