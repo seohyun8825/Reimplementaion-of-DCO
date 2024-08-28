@@ -88,17 +88,17 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
                     loss_refer_lose = compute_loss(losing_refer_output, target_lose, noise_scheduler, losing_timesteps, losing_latents)
                     
                     diff_win = loss_model_win - loss_refer_win
-                    diff_lose = loss_model_lose - loss_refer_lose
+                    diff_lose = 0.1*(loss_model_lose - loss_refer_lose)
                     
                     diff = diff_win - diff_lose
                     inside_term = -1 * args.dcoloss * diff
                     loss = -1 * torch.nn.LogSigmoid()(inside_term)
 
                     # 
-                    #print(f"Step: {step}, Loss: {loss.item()}, diff_win: {diff_win.item()}, diff_lose: {diff_lose.item()}, diff: {diff.item()}")
+                    print(f"Step: {step}, Loss: {loss.item()}, diff_win: {diff_win.item()}, diff_lose: {diff_lose.item()}, diff: {diff.item()}")
                 else:
                     loss = loss_model_win
-                    #print(f"Step: {step}, Loss: {loss.item()}")
+                    print(f"Step: {step}, Loss: {loss.item()}")
 
                 accelerator.backward(loss)
                 optimizer.step()
