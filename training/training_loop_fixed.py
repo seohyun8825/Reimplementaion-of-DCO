@@ -11,6 +11,10 @@ from training.hooks import register_hooks
 
 logger = logging.getLogger(__name__)
 
+
+##losing data 계속 업데이트됨
+#50step 전의 데이터 참조
+
 def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_scheduler, train_dataloader, text_encoders, tokenizers):
     vae, unet = models["vae"], models["unet"]
     text_encoder_one, text_encoder_two = models["text_encoder_one"], models["text_encoder_two"]
@@ -36,7 +40,7 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
     progress_bar = progressbar.ProgressBar(max_value=args.max_train_steps, widgets=widgets)
     progress_bar.start()
 
-    model_outputs = deque(maxlen=100) 
+    model_outputs = deque(maxlen=100)  
 
     for epoch in range(first_epoch, args.num_train_epochs):
         unet.train()
@@ -59,33 +63,32 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
 
 
                 model_output = unet(noisy_latents, timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample
-                model_output = model_output.detach()  
 
 
-                model_outputs.append(model_output)
+                model_outputs.append(model_output.detach())  
 
-                if len(model_outputs) == 100:
-                    losing_latents = model_outputs.popleft() 
+                if len(model_outputs) >= 50:
+                    losing_refer_output = model_outputs[0]  
                 else:
-                    losing_latents = model_output
+                    losing_refer_output = model_output  
 
-                losing_noise = torch.randn_like(losing_latents)
-                losing_timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (losing_latents.shape[0],)).long().to(losing_latents.device)
-                losing_noisy_latents = noise_scheduler.add_noise(losing_latents, losing_noise, losing_timesteps)
+                losing_noise = torch.randn_like(losing_refer_output)
+                losing_timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (losing_refer_output.shape[0],)).long().to(losing_refer_output.device)
+                losing_noisy_latents = noise_scheduler.add_noise(losing_refer_output, losing_noise, losing_timesteps)
 
                 with torch.no_grad():
                     refer_output = refer_model(noisy_latents, timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample
-                    losing_refer_output = refer_model(losing_noisy_latents, losing_timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample
+                    losing_refer_output_updated = refer_model(losing_noisy_latents, losing_timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample
 
                 target_win = noise
                 target_lose = losing_noise
 
                 loss_model_win = compute_loss(model_output, target_win, noise_scheduler, timesteps, latents)
-                loss_model_lose = compute_loss(unet(losing_noisy_latents, losing_timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample, target_lose, noise_scheduler, losing_timesteps, losing_latents)
+                loss_model_lose = compute_loss(unet(losing_noisy_latents, losing_timesteps, prompt_embeds, added_cond_kwargs=added_cond_kwargs).sample, target_lose, noise_scheduler, losing_timesteps, losing_refer_output)
 
                 if args.dcoloss > 0.0:
                     loss_refer_win = compute_loss(refer_output, target_win, noise_scheduler, timesteps, latents)
-                    loss_refer_lose = compute_loss(losing_refer_output, target_lose, noise_scheduler, losing_timesteps, losing_latents)
+                    loss_refer_lose = compute_loss(losing_refer_output_updated, target_lose, noise_scheduler, losing_timesteps, losing_refer_output)
                     
                     diff_win = loss_model_win - loss_refer_win
                     diff_lose = 0.1*(loss_model_lose - loss_refer_lose)
@@ -119,6 +122,7 @@ def train_loop(args, accelerator, models, noise_scheduler, optimizer, lr_schedul
 
         gc.collect()
         torch.cuda.empty_cache()
+
 
     progress_bar.finish()
     logger.info("Training completed")
