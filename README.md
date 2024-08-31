@@ -8,5 +8,5 @@ I’ve made some additional modifications to the DCO loss functions, which you c
 
 The idea behind the loss function in the `training_loop_fixed.py` file is to fully utilize the original DPO loss function (you can find this formula in the Diffusion for DPO paper).
 
->  Your data will be set as personalized data, and the output of the fine-tuning model, before `n` steps, will be treated as the loss data.  
-> *(This `n` is a hyperparameter, and experimentally, values between 50 and 100 worked best.)*
+Your data will be set as personalized data, and the output of the fine-tuning model, before `n` steps, will be treated as the loss data.  
+*(This `n` is a hyperparameter, and experimentally, values between 50 and 100 worked best.)*
